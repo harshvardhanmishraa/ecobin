@@ -1,7 +1,8 @@
 'use client';
-import Loader from '@/components/AdminDashBoard/Loader'; 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client'; 
+import Loader from '@/components/AdminDashBoard/Loader'; 
+import ReportModal from '@/components/ReportModal'; // Importing ReportModal
 
 const HomeView = ({ user }) => {
   const supabase = createClient(); // Initialize Supabase client
@@ -15,6 +16,10 @@ const HomeView = ({ user }) => {
   const [topContributors, setTopContributors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageFile, setImageFile] = useState(null);  // Added state for image file
+
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+  const [selectedReport, setSelectedReport] = useState(null); // Selected report state
 
   // Fetch data on component mount
   useEffect(() => {
@@ -30,7 +35,7 @@ const HomeView = ({ user }) => {
           supabase.from('profiles').select('total_points').eq('id', user.id).single(),
           supabase
             .from('waste_reports')
-            .select('id, location, waste_type, status, waste_amount, created_at')
+            .select('id, location, waste_type, status, description, created_at, image_url')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false }),
           supabase
@@ -64,6 +69,18 @@ const HomeView = ({ user }) => {
     fetchData();
   }, [user?.id]);
 
+  // Handle report click to open modal
+  const handleReportClick = (report) => {
+    setSelectedReport(report);
+    setIsModalOpen(true);
+  };
+
+  // Handle closing the modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedReport(null);
+  };
+
   // Filter reports based on the selected filter
   const filteredReports =
     reportFilter === 'All' ? reports : reports.filter((report) => report.status === reportFilter);
@@ -72,33 +89,57 @@ const HomeView = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate input fields
     if (!location || !wasteType || !description) {
-      setError('Please fill in all fields!');
+      setError('Please fill in all required fields!');
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('waste_reports').insert({
+      let imageUrl = null;
+      
+      // Upload image if one is selected
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        // Upload image to Supabase storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('waste-images')
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        // Get the public URL of the uploaded image
+        const { data: publicUrlData } = supabase.storage
+          .from('waste-images')
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      // Insert the report into the 'waste_reports' table
+      const { error: insertError } = await supabase.from('waste_reports').insert({
         user_id: user.id,
         location,
         waste_type: wasteType,
         description,
         status: 'Pending',
+        image_url: imageUrl, // Store the image URL
       });
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       alert('Report submitted successfully!');
       setLocation('');
       setWasteType('');
       setDescription('');
+      setImageFile(null);
 
-      // Refresh reports after submission
+      // Fetch updated reports
       const { data: updatedReports, error: fetchError } = await supabase
         .from('waste_reports')
-        .select('id, location, waste_type, status, waste_amount, created_at')
+        .select('id, location, waste_type, status, waste_amount, created_at, image_url')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -154,31 +195,53 @@ const HomeView = ({ user }) => {
         <div className="bg-white p-6 rounded-lg border shadow-md transition-all duration-300">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">Raise a Waste Report</h3>
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <input
-              type="text"
-              placeholder="Location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400"
-            />
-            <select
-              value={wasteType}
-              onChange={(e) => setWasteType(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400"
-            >
-              <option value="">Select Waste Type</option>
-              <option value="Plastic">Plastic</option>
-              <option value="Organic">Organic</option>
-              <option value="Hazardous">Hazardous</option>
-              <option value="General">General</option>
-            </select>
-            <textarea
-              placeholder="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400"
-              rows="3"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              <input
+                type="text"
+                placeholder="Location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Waste Type</label>
+              <select
+                value={wasteType}
+                onChange={(e) => setWasteType(e.target.value)}
+                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400"
+              >
+                <option value="">Select Waste Type</option>
+                <option value="Plastic">Plastic</option>
+                <option value="Organic">Organic</option>
+                <option value="Hazardous">Hazardous</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                placeholder="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400"
+                rows="3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Upload Image (Optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files[0])}
+                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400"
+              />
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -209,7 +272,7 @@ const HomeView = ({ user }) => {
                 <li
                   key={report.id}
                   className="p-3 rounded-lg bg-gray-50 hover:bg-green-100 transition-colors duration-200 flex justify-between items-center cursor-pointer"
-                  onClick={() => alert(`Report Details: ${report.location} - ${report.waste_type}`)}
+                  onClick={() => handleReportClick(report)} // Open modal on click
                 >
                   <span>
                     {report.location} - {report.waste_type} -{' '}
@@ -280,7 +343,16 @@ const HomeView = ({ user }) => {
           )}
         </ul>
       </div>
+
+      {/* Report Modal */}
+      {isModalOpen && selectedReport && (
+        <ReportModal 
+          report={selectedReport} 
+          onClose={closeModal} 
+        />
+      )}
     </div>
   );
 }
-export default HomeView
+
+export default HomeView;

@@ -32,7 +32,7 @@ export async function updateSession(request) {
   } = await supabase.auth.getUser()
 
   // Define public paths that don't require authentication
-  const publicPaths = ['/', '/join-community', '/about','/learn', '/auth/sign-in']
+  const publicPaths = ['/', '/join-community', '/about','/learn', '/auth/sign-in','/api/tracking/dustbin']
   const isPublicPath = publicPaths.includes(request.nextUrl.pathname)
 
   // If user is logged in and trying to access a public path or auth page, redirect to dashboard

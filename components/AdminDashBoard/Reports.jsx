@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { motion } from 'framer-motion';
+import ReportModal from '@/components/ReportModal'; // Importing the modal
 
 export default function Reports() {
   const supabase = createClient();
@@ -11,6 +12,10 @@ export default function Reports() {
   const [error, setError] = useState(null);
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc' for created_at
   const [statusFilter, setStatusFilter] = useState('All'); // 'All', 'Pending', 'Verified', 'Completed'
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -18,7 +23,7 @@ export default function Reports() {
         setLoading(true);
         let query = supabase
           .from('waste_reports')
-          .select('id, location, waste_type, description, status, user_id, created_at');
+          .select('id, location, waste_type, description, status, user_id, created_at,image_url');
 
         if (statusFilter !== 'All') {
           query = query.eq('status', statusFilter);
@@ -66,6 +71,18 @@ export default function Reports() {
 
   const toggleSortOrder = () => {
     setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+  };
+
+  // Open modal with selected report
+  const handleReportClick = (report) => {
+    setSelectedReport(report);
+    setIsModalOpen(true);
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedReport(null);
   };
 
   const rowVariants = {
@@ -152,7 +169,8 @@ export default function Reports() {
                   initial="hidden"
                   animate="visible"
                   custom={index}
-                  className="border-b hover:bg-gray-50"
+                  className="border-b hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleReportClick(report)} // Trigger modal on click
                 >
                   <td className="py-3 px-2 sm:px-4">{index + 1}</td>
                   <td className="py-3 px-2 sm:px-4">{report.location}</td>
@@ -193,6 +211,14 @@ export default function Reports() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal for viewing report details */}
+      {isModalOpen && selectedReport && (
+        <ReportModal
+          report={selectedReport}
+          onClose={closeModal}
+        />
+      )}
     </motion.div>
   );
 }

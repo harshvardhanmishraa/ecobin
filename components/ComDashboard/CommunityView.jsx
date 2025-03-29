@@ -171,12 +171,12 @@ const CommunityView = ({ user }) => {
           onClick={() => setIsCollapsed((prev) => !prev)}
           className="bg-green-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-green-700 transition-all"
         >
-          {isCollapsed ? 'Expand' : 'Collapse'} Sidebar
+          {isCollapsed ? 'Expand' : 'Collapse'} Top Contributors
         </button>
       </div>
 
       {/* Top Contributors */}
-      <div className={`bg-white p-6 rounded-lg shadow-md transition-all duration-300 ${isCollapsed ? 'hidden' : ''}`}>
+      <div className={`bg-white p-6 rounded-lg shadow-md transition-all duration-300 ${isCollapsed ? 'hidden ' : ''}`}>
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Top Contributors</h3>
         <ul className="space-y-4">
           {topContributors.map((contributor) => (
@@ -210,12 +210,14 @@ const CommunityView = ({ user }) => {
                     <span className="text-green-600 font-medium text-sm">{work.reward} pts</span>
                   </div>
                   <p className="text-sm text-gray-500">{work.description}</p>
-                  <button
+                 <div className='flex justify-end items-center'>
+                 <button
                     onClick={() => handleJoin(work)}
-                    className="mt-4 px-4 py-2 font-semibold text-white rounded-full bg-green-600 hover:bg-green-700 hover:scale-105 transition-all"
+                    className="mt-4 px-4 py-2 font-semibold w-fit  text-white rounded-full bg-green-600 hover:bg-green-700 hover:scale-105 transition-all"
                   >
                     Join
                   </button>
+                 </div>
                 </div>
               ))
             ) : (
