@@ -1,7 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client'; 
-import Loader from '@/components/AdminDashBoard/Loader'; 
 import ReportModal from '@/components/ReportModal'; // Importing ReportModal
 
 const HomeView = ({ user }) => {
@@ -162,7 +161,7 @@ const HomeView = ({ user }) => {
 
   // Show loading state
   if (loading) {
-    return <Loader message="Loading data..." />;
+    return <p>Loading...</p>;
   }
 
   return (

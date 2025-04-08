@@ -1,7 +1,6 @@
 // app/dashboard/page.js
 'use server'
 import AdminDashboard from '@/pages/AdminDashboard';
-import StaffDashboard from '@/pages/StaffDashboard';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import CommunityDashboard from '@/pages/CommunityDashboard';
@@ -19,8 +18,6 @@ export default async function DashboardPage() {
   switch (designation.toLowerCase()) {
     case 'admin':
       return <AdminDashboard user={user} />;
-    case 'staff':
-      return <StaffDashboard user={user} />;
     case 'community':
       return <CommunityDashboard user={user} />;
     default:
